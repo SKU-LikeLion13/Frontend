@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 
 export default function Header() {
   return (
-    <header className="bg-[#1B1B1B] text-white px-6 py-4 relative">
+    <header className="bg-[#1B1B1B] text-white px-6 py-4 relative z-50">
       <div className="absolute left-6 top-1/2 transform -translate-y-1/2 text-2xl font-bold">
         <Link to="/" className="text-white hover:text-[#FF7D29] transition-colors">
           Adwise
