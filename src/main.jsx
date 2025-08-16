@@ -6,6 +6,7 @@ import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
 import CASH from './pages/CASH.jsx'
+import AIPlaceholder from './pages/AI.jsx'
 import CHAT from './pages/CHAT.jsx'
 import ChartResult from './pages/CHART_RESULT.jsx' // ChartResult 컴포넌트 임포트
 
@@ -25,7 +26,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Header />
-        <CASH key="ad" initialTab="ad" />
+        <AIPlaceholder />
         <Footer />
       </>
     ),
@@ -35,7 +36,7 @@ const router = createBrowserRouter([
     element: (
       <>
         <Header />
-        <CASH key="fee" initialTab="fee" />
+        <CASH key="fee" />
         <Footer />
       </>
     ),

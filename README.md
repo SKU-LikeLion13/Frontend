@@ -1,12 +1,8 @@
-# React + Vite
+## 개발 로그 (Development Log)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### 2025년 08월 16일
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+*   **chat.jsx**: 💬 실시간 채팅 기능 구현 및 UI 개선
+*   **cash.jsx**: 💰 현금 흐름 관리 및 거래 내역 조회 기능 추가
+*   **chart_result.jsx**: 📊 다양한 데이터 시각화를 위한 차트 결과 페이지 개발 (예: 막대 그래프, 선 그래프)
+*   **metric.js**: 📈 핵심 지표(KPI) 계산 로직 및 데이터 연동 모듈 구현

@@ -76,9 +76,9 @@ const AiAnalysisSummary = ({ platformData }) => {
         const simplifiedData = platformData.map((p) => ({
           platform: p.platform,
           cpc: Math.round(p.cpc),
-          cvr: (p.cvr * 100).toFixed(1),
-          roas: (p.roas * 100).toFixed(1),
-          roi: (p.roi * 100).toFixed(1),
+          cvr: (p.cvr).toFixed(1),
+          roas: (p.roas).toFixed(1),
+          roi: (p.roi).toFixed(1),
         }));
 
         const response = await fetch("/api/analyze-metrics", {
