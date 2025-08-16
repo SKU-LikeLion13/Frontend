@@ -1,25 +1,70 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
-import AI from './pages/AI.jsx'
 import CASH from './pages/CASH.jsx'
 import CHAT from './pages/CHAT.jsx'
+import ChartResult from './pages/CHART_RESULT.jsx' // ChartResult 컴포넌트 임포트
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <>
+        <Header />
+        <Home />
+        <Footer />
+      </>
+    ),
+  },
+  {
+    path: "/ai",
+    element: (
+      <>
+        <Header />
+        <CASH key="ad" initialTab="ad" />
+        <Footer />
+      </>
+    ),
+  },
+  {
+    path: "/cash",
+    element: (
+      <>
+        <Header />
+        <CASH key="fee" initialTab="fee" />
+        <Footer />
+      </>
+    ),
+  },
+  {
+    path: "/chat",
+    element: (
+      <>
+        <Header />
+        <CHAT />
+        <Footer />
+      </>
+    ),
+  },
+  {
+    path: "/chart-result",
+    element: (
+      <>
+        <Header />
+        <ChartResult />
+        <Footer />
+      </>
+    ),
+  },
+]);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <Header />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/ai" element={<AI />} />
-        <Route path="/cash" element={<CASH />} />
-        <Route path="/chat" element={<CHAT />} />
-      </Routes>
-      <Footer />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </StrictMode>,
 )
+
