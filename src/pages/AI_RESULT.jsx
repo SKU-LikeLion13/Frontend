@@ -57,12 +57,12 @@ export default function AI_RESULT() {
           <a
             href={videoUrl}
             download
-            className="px-4 py-2 rounded-full bg-[#D9D9D9] hover:bg-[#FF7D29] text-[#1B1B1B] font-semibold">
+            className="px-4 py-2 rounded-full bg-[#D9D9D9] hover:bg-[#FF7D29] hover:text-white text-[#1B1B1B] font-semibold">
             저장하기
           </a>
           <Link
             to="/ai"
-            className="px-4 py-2 rounded-full bg-[#D9D9D9] text-black hover:bg-[#FF7D29] font-semibold">
+            className="px-4 py-2 rounded-full bg-[#D9D9D9] text-black hover:bg-[#FF7D29] hover:text-white font-semibold">
             다시 만들기
           </Link>
         </div>
