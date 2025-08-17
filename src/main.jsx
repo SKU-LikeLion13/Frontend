@@ -9,6 +9,7 @@ import AI from './pages/AI.jsx';
 import CASH from './pages/CASH.jsx';
 import CHAT from './pages/CHAT.jsx';
 import ChartResult from './pages/CHART_RESULT.jsx';
+import AI_RESULT from './pages/AI_RESULT.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -20,6 +21,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/cash" element={<CASH />} />
         <Route path="/chat" element={<CHAT />} />
         <Route path="/chart-result" element={<ChartResult />} /> 
+        <Route path="/ai-result" element={<AI_RESULT />} /> 
       </Routes>
       <Footer />
     </BrowserRouter>

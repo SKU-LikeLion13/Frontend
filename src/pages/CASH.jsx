@@ -205,7 +205,6 @@ const CASH = () => {
 
           const analysisResult = processAnalysisData(rawData);
 
-          // 완료 시점 - 최소 로딩시간 보장
           const elapsed = Date.now() - startTime;
           const delay = Math.max(0, minLoadingTime - elapsed);
 
