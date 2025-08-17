@@ -1,16 +1,6 @@
-// --- CASH 페이지 메인 컴포넌트 ---
-// 이 파일은 '수수료 비교&분석' 탭을 포함하는 메인 페이지 컴포넌트임.
-// 주요 기능:
-// 1. 이름/상호명 입력 및 엑셀/CSV 파일 업로드
-// 2. 업로드된 파일을 읽어 JSON으로 변환
-// 3. 데이터 전처리(날짜 변환, 플랫폼 정규화 등)
-// 4. 분석 결과를 metrics.js의 processAnalysisData로 처리
-// 5. 결과 페이지("/chart-result")로 이동
-// 6. 작성 중인 폼 내용이 있는 경우 페이지 이탈 경고 표시
-
 import { useDropzone } from "react-dropzone";
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate, useBlocker } from "react-router-dom";
+import React, { useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx"; // 엑셀/CSV 파싱용 라이브러리
 import { normalizePlatform, processAnalysisData } from "../utils/metrics"; // 데이터 처리 유틸리티
 
@@ -21,7 +11,7 @@ const InputField = ({ label, value, onChange, ...props }) => (
   <div className="flex items-center justify-between">
     <label className="text-xl font-bold">{label}</label>
     <input
-      {...props} // type, name 등 추가 속성
+      {...props}
       value={value}
       onChange={onChange}
       className="bg-[#1B1B1B] border-b-2 border-gray-600 w-2/3 text-lg text-white focus:outline-none focus:border-[#FF7D29] transition shadow-[inset_0_0_0_1000px_#1B1B1B] [caret-color:white] [&:-webkit-autofill]:[-webkit-text-fill-color:white] [&:-webkit-autofill:hover]:[-webkit-text-fill-color:white] [&:-webkit-autofill:focus]:[-webkit-text-fill-color:white]"
@@ -100,7 +90,7 @@ const ExecuteButton = ({ onClick, disabled, children }) => (
 );
 
 // '수수료 비교&분석' 폼 컴포넌트
-const FeeAnalysis = ({ onExecute, onFormChange }) => {
+const FeeAnalysis = ({ onExecute }) => {
   const [formData, setFormData] = useState({
     name: "",
     businessName: "",
@@ -120,12 +110,6 @@ const FeeAnalysis = ({ onExecute, onFormChange }) => {
   };
 
   const handleFileChange = (file) => setFormData((prev) => ({ ...prev, file }));
-
-  // 폼 변경 시 부모 컴포넌트에 알림 (페이지 이탈 방지용)
-  useEffect(() => {
-    const isDirty = !!(formData.name || formData.businessName || formData.file);
-    onFormChange(isDirty);
-  }, [formData, onFormChange]);
 
   return (
     <div className="w-full flex flex-col items-center text-white mt-12">
@@ -178,32 +162,9 @@ const LoadingScreen = ({ name }) => (
 const CASH = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingName, setLoadingName] = useState("");
-  const [isFormDirty, setIsFormDirty] = useState(false);
-  const [formResetKey, setFormResetKey] = useState(0);
 
   const navigate = useNavigate();
-  const isNavigatingAfterExecute = useRef(false); // 분석 후 페이지 이동 중인지 여부
-
-  const resetForms = useCallback(() => {
-    setIsFormDirty(false);
-    setFormResetKey((prev) => prev + 1);
-  }, []);
-
-  // 페이지 이탈 경고
-  useBlocker(
-    useCallback(
-      ({ currentLocation, nextLocation }) => {
-        if (isNavigatingAfterExecute.current) return false; // 분석 후 이동 중이면 경고 안함
-        if (isFormDirty && currentLocation.pathname !== nextLocation.pathname) {
-          return !window.confirm(
-            "작성중인 내용이 있습니다. 페이지를 이동하시겠습니까? 작성중인 내용은 저장되지 않습니다."
-          );
-        }
-        return false;
-      },
-      [isFormDirty]
-    )
-  );
+  const isNavigatingAfterExecute = useRef(false);
 
   // 수수료 분석 실행 함수
   const handleFeeExecute = useCallback(
@@ -217,8 +178,12 @@ const CASH = () => {
       setIsLoading(true);
       setLoadingName(formData.name);
 
+      const startTime = Date.now(); // 시작 시간 기록
+      const minLoadingTime = 1500; // 최소 로딩 시간 (ms)
+
       const reader = new FileReader();
-      reader.onload = (e) => {
+
+      reader.onload = async (e) => {
         try {
           const data = e.target.result;
           const workbook = XLSX.read(data, { type: "binary" });
@@ -240,14 +205,17 @@ const CASH = () => {
 
           const analysisResult = processAnalysisData(rawData);
 
+          // 완료 시점 - 최소 로딩시간 보장
+          const elapsed = Date.now() - startTime;
+          const delay = Math.max(0, minLoadingTime - elapsed);
+
           setTimeout(() => {
             setIsLoading(false);
-            resetForms();
             navigate("/chart-result", {
               state: { analysisResult, name: formData.name },
             });
             isNavigatingAfterExecute.current = false;
-          }, 3000);
+          }, delay);
         } catch (error) {
           setIsLoading(false);
           alert(`파일 처리 중 오류가 발생했습니다: ${error.message}`);
@@ -263,18 +231,14 @@ const CASH = () => {
 
       reader.readAsBinaryString(formData.file);
     },
-    [navigate, resetForms]
+    [navigate]
   );
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#1B1B1B] text-white font-sans">
       <div className="relative w-full max-w-5xl bg-[#1B1B1B] border border-orange-500 rounded-xl p-12 flex flex-col mx-4 my-24">
         <div className={`${isLoading ? "filter blur-sm" : ""}`}>
-          <FeeAnalysis
-            key={`fee-form-${formResetKey}`}
-            onExecute={handleFeeExecute}
-            onFormChange={setIsFormDirty}
-          />
+          <FeeAnalysis onExecute={handleFeeExecute} />
         </div>
 
         {isLoading && <LoadingScreen name={loadingName} />}
