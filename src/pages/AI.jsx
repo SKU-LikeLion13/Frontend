@@ -1,5 +1,21 @@
 import React, { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom"; 
+
+const LoadingScreen = ({ name }) => (
+  <div className="absolute inset-0 flex items-center justify-center z-50">
+    <div className="bg-white text-black rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-2xl">
+      <h2 className="text-3xl font-bold">
+        {name ? `${name} 사장님의` : "사장님의"}
+        <br />
+        광고를 제작 중이에요.
+      </h2>
+      <div className="my-8 animate-spin">
+        <img src="/img/loading.png" alt="Loading" className="w-24 h-24" />
+      </div>
+      <p className="text-2xl">잠시만 기다려주세요!</p>
+    </div>
+  </div>
+);
 
 function AI() {
   const [selectedTags, setSelectedTags] = useState([]);
@@ -61,7 +77,6 @@ function AI() {
         <div className="border-2 border-[#FF7D29] rounded-lg p-35 bg-[#1B1B1B]">
           <h1 className="text-3xl font-bold text-white text-center mb-12">AI 광고 제작</h1>
 
-          {/* 상호명 */}
           <div className="mb-8">
             <div className="flex items-center mb-4">
               <label className="text-white text-lg font-medium w-24">상호명</label>
@@ -149,10 +164,9 @@ function AI() {
             </div>
           </div>
 
-          {/* 실행하기 버튼 */}
           <div className="text-center">
             <button
-              className="bg-white text-[#1B1B1B] px-7 py-3 rounded-4xl text-lg  hover:bg-[#FF7D29] hover:text-black transition-colors"
+              className="bg-white text-[#1B1B1B] px-7 py-3 rounded-4xl text-lg hover:bg-[#FF7D29] hover:text-black transition-colors"
               onClick={openConfirm}
             >
               실행하기
@@ -161,7 +175,6 @@ function AI() {
         </div>
       </div>
 
-      {/* 확인 모달 */}
       {showConfirm && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={closeConfirm} />
@@ -205,37 +218,14 @@ function AI() {
                   className="px-4 py-2 rounded-full bg-[#D9D9D9] hover:bg-[#FF7D29] text-black font-semibold text-sm"
                   onClick={confirmProceed}
                 >
-                  네, 제작해주세요. 
+                  네, 제작해주세요.
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* 로딩 모달 */}
-      {showLoading && (
-        <div className="absolute inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black/60" />
-          <div className="absolute inset-0 flex items-center justify-center p-4">
-            <div className="w-[360px] bg-white rounded-2xl shadow-2xl p-8 text-center">
-              <p className="text-sm font-bold leading-5">
-                {companyName || "@@"} 사장님의
-                <br />
-                광고를 제작중이에요.
-              </p>
-              <div className="my-8 flex items-center justify-center">
-                <img src="/img/loading.png" alt="Loading" className="w-16 h-16 animate-spin" />
-              </div>
-              <p className="text-sm font-extrabold">
-                잠시만
-                <br />
-                기다려주세요!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {showLoading && <LoadingScreen name={companyName} />}
     </div>
   );
 }
