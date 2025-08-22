@@ -1,8 +1,8 @@
 import { useDropzone } from "react-dropzone";
 import React, { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import * as XLSX from "xlsx"; // 엑셀/CSV 파싱용 라이브러리
 import { normalizePlatform, processAnalysisData } from "../utils/metrics"; // 데이터 처리 유틸리티
+import { api, getOrCreateAnonId } from "../utils/apiClient.js";
 
 // --- 공통 UI 컴포넌트 ---
 
@@ -74,6 +74,21 @@ const FileUploadField = ({ file, onFileChange }) => {
   );
 };
 
+// 파일 불러오기 버튼 컴포넌트
+const FileLoadButton = ({ onClick }) => (
+  <div className="flex items-center justify-between">
+    <label className="text-xl font-bold">파일 불러오기</label>
+    <div
+      onClick={onClick}
+      className="w-2/3 p-4 rounded-full transition-colors cursor-pointer border-2 border-[#FF7D29] bg-transparent flex items-center justify-center gap-3 hover:bg-gray-800"
+    >
+      <span className="font-semibold text-sm text-white underline whitespace-nowrap">
+        불러오기
+      </span>
+    </div>
+  </div>
+);
+
 // 분석 실행 버튼
 const ExecuteButton = ({ onClick, disabled, children }) => (
   <button
@@ -111,6 +126,24 @@ const FeeAnalysis = ({ onExecute }) => {
 
   const handleFileChange = (file) => setFormData((prev) => ({ ...prev, file }));
 
+  const handleLoadFile = async () => {
+    try {
+      const anonId = getOrCreateAnonId();
+      const { data } = await api.get('/api/uploads/filenames', {
+        params: { anonId, limit: 20 },
+      });
+      const list = Array.isArray(data) ? data : (data?.filenames || []);
+      if (list.length === 0) {
+        alert('최근 업로드된 파일이 없습니다.');
+        return;
+      }
+      alert(`최근 파일 목록\n\n${list.map((n, i) => `${i + 1}. ${n}`).join('\n')}`);
+    } catch (e) {
+      console.error(e);
+      alert('최근 파일 목록을 가져오지 못했습니다.');
+    }
+  };
+
   return (
     <div className="w-full flex flex-col items-center text-white mt-12">
       <h1 className="text-white text-3xl font-bold pb-15">수수료 비교&분석</h1>
@@ -130,6 +163,7 @@ const FeeAnalysis = ({ onExecute }) => {
           onChange={handleChange}
         />
         <FileUploadField file={formData.file} onFileChange={handleFileChange} />
+        <FileLoadButton onClick={handleLoadFile} />
       </div>
       <ExecuteButton
         onClick={() => onExecute(formData)}
@@ -168,7 +202,7 @@ const CASH = () => {
 
   // 수수료 분석 실행 함수
   const handleFeeExecute = useCallback(
-    (formData) => {
+    async (formData) => {
       if (!formData.file) {
         alert("분석할 엑셀/CSV 파일을 업로드해주세요.");
         return;
@@ -178,58 +212,52 @@ const CASH = () => {
       setIsLoading(true);
       setLoadingName(formData.name);
 
-      const startTime = Date.now(); // 시작 시간 기록
-      const minLoadingTime = 1500; // 최소 로딩 시간 (ms)
+      const startTime = Date.now();
+      const minLoadingTime = 1500;
 
-      const reader = new FileReader();
+      try {
+        const payload = new FormData();
+        payload.append('file', formData.file);
 
-      reader.onload = async (e) => {
-        try {
-          const data = e.target.result;
-          const workbook = XLSX.read(data, { type: "binary" });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        const { data } = await api.post('/api/uploads/parse', payload, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
 
-          const rawData = jsonData.map((row) => {
+        // 유연한 응답 처리: 서버가 analysisResult 또는 rows/rawData를 반환할 수 있음
+        let analysisResult = null;
+        if (data?.analysisResult) {
+          analysisResult = data.analysisResult;
+        } else {
+          const rows = Array.isArray(data)
+            ? data
+            : (data?.rows || data?.rawData || data?.data || []);
+          const normalizedRows = rows.map((row) => {
             let date = row.date;
-            if (typeof date === "number") {
+            if (typeof date === 'number') {
               const excelEpoch = new Date(1899, 11, 30);
-              const excelDate = new Date(
-                excelEpoch.getTime() + date * 86400000
-              );
-              date = excelDate.toISOString().split("T")[0];
+              const excelDate = new Date(excelEpoch.getTime() + date * 86400000);
+              date = excelDate.toISOString().split('T')[0];
             }
             return { ...row, date, platform: normalizePlatform(row.platform) };
           });
-
-          const analysisResult = processAnalysisData(rawData);
-
-          // 완료 시점 - 최소 로딩시간 보장
-          const elapsed = Date.now() - startTime;
-          const delay = Math.max(0, minLoadingTime - elapsed);
-
-          setTimeout(() => {
-            setIsLoading(false);
-            navigate("/chart-result", {
-              state: { analysisResult, name: formData.name },
-            });
-            isNavigatingAfterExecute.current = false;
-          }, delay);
-        } catch (error) {
-          setIsLoading(false);
-          alert(`파일 처리 중 오류가 발생했습니다: ${error.message}`);
-          isNavigatingAfterExecute.current = false;
+          analysisResult = processAnalysisData(normalizedRows);
         }
-      };
 
-      reader.onerror = (error) => {
+        const elapsed = Date.now() - startTime;
+        const delay = Math.max(0, minLoadingTime - elapsed);
+
+        setTimeout(() => {
+          setIsLoading(false);
+          localStorage.setItem("analysisResult", JSON.stringify(analysisResult));
+          localStorage.setItem("userName", formData.name);
+          navigate("/chart-result", { state: { analysisResult, name: formData.name } });
+          isNavigatingAfterExecute.current = false;
+        }, delay);
+      } catch (error) {
         setIsLoading(false);
-        alert(`파일을 읽는 중 오류가 발생했습니다: ${error.message}`);
+        alert(`파일 업로드/파싱 중 오류가 발생했습니다: ${error?.response?.data?.message || error.message}`);
         isNavigatingAfterExecute.current = false;
-      };
-
-      reader.readAsBinaryString(formData.file);
+      }
     },
     [navigate]
   );

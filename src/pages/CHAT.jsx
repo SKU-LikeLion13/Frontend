@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { api } from "../utils/apiClient.js";
 
 // 스크롤바 스타일 정의
 const scrollbarStyles = `
@@ -28,13 +29,46 @@ const ThinkingIndicator = () => (
 
 // AI 챗봇 페이지 컴포넌트
 const CHAT = () => {
-  const [messages, setMessages] = useState([
-    { id: 1, text: "안녕하세요. 무엇이 궁금하신가요?", sender: "assistant" },
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const scrollContainerRef = useRef(null);
+  const [batchId, setBatchId] = useState(0);
+
+  // 대화 기록 로드
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      try {
+        const { data } = await api.get('/api/chat/history');
+        if (Array.isArray(data) && data.length > 0) {
+          const historyMessages = data.map(msg => ({
+            id: msg.id,
+            text: msg.content,
+            sender: msg.role === 'user' ? 'user' : 'assistant',
+          }));
+          setMessages(historyMessages);
+          // 마지막 batchId 추출
+          const lastMsg = data[data.length - 1];
+          if (lastMsg?.batchId) {
+            setBatchId(lastMsg.batchId);
+          }
+        } else {
+          // 대화 기록이 없으면 초기 메시지 표시
+          setMessages([
+            { id: 1, text: "안녕하세요. 무엇이 궁금하신가요?", sender: "assistant" },
+          ]);
+        }
+      } catch (error) {
+        console.error('대화 기록 로드 실패:', error);
+        // 에러 시에도 초기 메시지 표시
+        setMessages([
+          { id: 1, text: "안녕하세요. 무엇이 궁금하신가요?", sender: "assistant" },
+        ]);
+      }
+    };
+    loadChatHistory();
+  }, []);
 
   // 메시지 목록이 업데이트될 때마다 스크롤을 맨 아래로 이동
   useEffect(() => {
@@ -118,20 +152,21 @@ const CHAT = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmedInput }),
+      const { data } = await api.post('/api/chat/send', {
+        message: trimmedInput,
+        batchId: batchId
       });
-
-      if (!response.ok) throw new Error("서버 응답 오류");
-
-      const data = await response.json();
+      
       const assistantMessage = {
         id: Date.now(),
-        text: data.response, 
+        text: data.response,
         sender: "assistant",
       };
+
+      // batchId 업데이트
+      if (data.batchId) {
+        setBatchId(data.batchId);
+      }
 
       setMessages((prev) => prev.filter(msg => msg.id !== 'thinking').concat(assistantMessage));
 

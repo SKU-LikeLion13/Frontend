@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { api } from '../utils/apiClient.js'
 import {
   LineChart,
   Line,
@@ -17,12 +18,13 @@ import {
   FiArrowDown,
   FiArrowUp,
 } from "react-icons/fi";
-import { METRIC_CONFIG, formatMetric } from "../utils/metrics"; // 지표 관련 유틸 함수
-import { FaMousePointer } from "react-icons/fa"; // metrics.js에서 사용됨
+import { METRIC_CONFIG, formatMetric } from "../utils/metrics";
 
 // --- 상수 & 보조 함수 ---
 
 const POINT_COLOR = "#FF7D29";
+
+// 세션 헤더는 공용 클라이언트 인터셉터에서 자동 첨부됩니다.
 
 // 지표 설명 카드
 const MetricDefinitionCard = ({ metricKey }) => {
@@ -56,74 +58,71 @@ const MetricDefinitionCard = ({ metricKey }) => {
   );
 };
 
-// AI 분석 요약 영역
-const AiAnalysisSummary = ({ platformData }) => {
-  const [aiSummary, setAiSummary] = useState(null);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
-
-  useEffect(() => {
-    if (!platformData || platformData.length === 0) {
-      setAiSummary(null);
-      return;
-    }
-
-    const fetchAiSummary = async () => {
-      setIsAiLoading(true);
-      setAiError(null);
-      try {
-        // AI에 보낼 데이터 정리
-        const simplifiedData = platformData.map((p) => ({
-          platform: p.platform,
-          cpc: Math.round(p.cpc),
-          cvr: (p.cvr).toFixed(1),
-          roas: (p.roas).toFixed(1),
-          roi: (p.roi).toFixed(1),
-        }));
-
-        const response = await fetch("/api/analyze-metrics", {
-          // AI 분석 API 호출
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ data: simplifiedData }),
-        });
-
-        if (!response.ok) {
-          throw new Error("AI 분석 서버에서 오류가 발생했습니다.");
-        }
-
-        const result = await response.json();
-        setAiSummary(result.summary); // 결과 요약 저장
-      } catch (error) {
-        console.error("AI 분석 요청 오류:", error);
-        setAiError("AI 분석 결과를 가져오는 데 실패했습니다.");
-      } finally {
-        setIsAiLoading(false);
-      }
-    };
-
-    fetchAiSummary();
-  }, [platformData]);
-
+// AI KPI 설명 컴포넌트
+const KpiExplanation = ({ explanation, isLoading, error, title }) => {
   return (
     <div className="bg-[#2D2D2D] p-6 rounded-xl border border-gray-700 mt-8">
       <h3 className="text-xl font-bold text-white mb-4 flex items-center">
         <FiHelpCircle className="mr-2 text-[#FF7D29]" />
-        AI 분석 최종 설명
+        {title}
       </h3>
-      {isAiLoading && (
+      {isLoading && (
         <div className="text-center text-gray-400">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF7D29] mx-auto mb-2"></div>
-          <p>AI가 데이터를 분석 중입니다...</p>
+          <p>AI가 KPI 설명을 생성 중입니다...</p>
         </div>
       )}
-      {aiError && <p className="text-red-400 text-center">{aiError}</p>}
-      {aiSummary && !isAiLoading && !aiError && (
-        <p className="text-gray-300 whitespace-pre-wrap">{aiSummary}</p>
+      {error && <p className="text-red-400 text-center">{error}</p>}
+      {explanation && !isLoading && !error && (
+        <div className="space-y-4">
+          {explanation.headline && (
+            <div className="bg-[#1B1B1B] p-4 rounded-lg border border-gray-600">
+              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">핵심 요약</h4>
+              <p className="text-gray-300">{explanation.headline}</p>
+            </div>
+          )}
+          {explanation.bullets && explanation.bullets.length > 0 && (
+            <div className="bg-[#1B1B1B] p-4 rounded-lg border border-gray-600">
+              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">주요 포인트</h4>
+              <ul className="space-y-2">
+                {explanation.bullets.map((bullet, index) => (
+                  <li key={index} className="text-gray-300 flex items-start">
+                    <span className="text-[#FF7D29] mr-2">•</span>
+                    {bullet}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {explanation.risks && explanation.risks.length > 0 && (
+            <div className="bg-[#1B1B1B] p-4 rounded-lg border border-red-500/30">
+              <h4 className="text-lg font-bold text-red-400 mb-2">주의사항</h4>
+              <ul className="space-y-2">
+                {explanation.risks.map((risk, index) => (
+                  <li key={index} className="text-gray-300 flex items-start">
+                    <span className="text-red-400 mr-2">⚠</span>
+                    {risk}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {explanation.nextActions && explanation.nextActions.length > 0 && (
+            <div className="bg-[#1B1B1B] p-4 rounded-lg border border-green-500/30">
+              <h4 className="text-lg font-bold text-green-400 mb-2">다음 단계</h4>
+              <ul className="space-y-2">
+                {explanation.nextActions.map((action, index) => (
+                  <li key={index} className="text-gray-300 flex items-start">
+                    <span className="text-green-400 mr-2">→</span>
+                    {action}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
       )}
-      {!aiSummary && !isAiLoading && !aiError && (
+      {!explanation && !isLoading && !error && (
         <p className="text-gray-500 text-center">
           AI 분석 결과를 기다리는 중입니다.
         </p>
@@ -203,25 +202,169 @@ const ChartCard = ({ metricKey, data, view, selectedPlatform }) => {
 const ChartResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { analysisResult, name } = location.state || {};
-  const { platformChartData, monthlyChartData } = analysisResult || {};
+
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // 서버에서 데이터 로드
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // 1. 플랫폼 목록 조회
+        const { data: platforms } = await api.get('/api/ad-data/platforms');
+        
+        // 2. 플랫폼별 합계 데이터 조회
+        const { data: platformReports } = await api.get('/api/ad-data/reports/platforms');
+        
+        // 3. 각 플랫폼의 월별 데이터 조회
+        const monthlyData = {};
+        for (const platform of platforms) {
+          try {
+            const { data: monthlyReports } = await api.get(`/api/ad-data/reports/${platform.code}/monthly`);
+            monthlyData[platform.name] = monthlyReports.map(report => ({
+              month: report.month || report.date,
+              cpc: report.cpc,
+              cvr: report.cvr,
+              roas: report.roas,
+              roi: report.roi,
+            }));
+          } catch (e) {
+            console.warn(`Failed to load monthly data for ${platform.name}:`, e);
+            monthlyData[platform.name] = [];
+          }
+        }
+
+        // 4. 데이터 구조 변환
+        const platformChartData = platformReports.map(report => ({
+          platform: report.platformCode,
+          cpc: report.cpc,
+          cvr: report.cvr,
+          roas: report.roas,
+          roi: report.roi,
+        }));
+
+        const result = {
+          platformChartData,
+          monthlyChartData: monthlyData
+        };
+
+        setAnalysisResult(result);
+        setName(localStorage.getItem("userName") || "사용자");
+        
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        setError("데이터를 불러오는 중 오류가 발생했습니다.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const [view, setView] = useState("platform_summary");
   const [selectedPlatform, setSelectedPlatform] = useState(null);
 
+  // AI 설명 State
+  const [aggregateExplanation, setAggregateExplanation] = useState(null);
+  const [isAggregateLoading, setIsAggregateLoading] = useState(false);
+  const [aggregateError, setAggregateError] = useState(null);
+
+  const [monthlyExplanation, setMonthlyExplanation] = useState(null);
+  const [isMonthlyLoading, setIsMonthlyLoading] = useState(false);
+  const [monthlyError, setMonthlyError] = useState(null);
+
+  // 전체 플랫폼 요약 설명 API 호출
+  useEffect(() => {
+    if (analysisResult?.platformChartData) {
+      const getExplanation = async () => {
+        setIsAggregateLoading(true);
+        setAggregateError(null);
+        try {
+          const response = await api.post('/api/explain/platforms', {})
+          setAggregateExplanation(response.data);
+        } catch (error) {
+          setAggregateError("전체 KPI 요약 정보를 가져오는 데 실패했습니다.");
+          console.error(error);
+        } finally {
+          setIsAggregateLoading(false);
+        }
+      };
+      getExplanation();
+    }
+  }, [analysisResult?.platformChartData]);
+
+  // 특정 플랫폼 월별 설명 API 호출
+  useEffect(() => {
+    if (view === "monthly_detail" && selectedPlatform && analysisResult?.monthlyChartData) {
+      const getExplanation = async () => {
+        setIsMonthlyLoading(true);
+        setMonthlyError(null);
+        setMonthlyExplanation(null); // 플랫폼 변경 시 이전 데이터 초기화
+        try {
+          const response = await api.post(`/api/explain/platforms/${selectedPlatform}/monthly`, {})
+          setMonthlyExplanation(response.data);
+        } catch (error) {
+          setMonthlyError(
+            `${selectedPlatform}의 월별 KPI 정보를 가져오는 데 실패했습니다.`
+          );
+          console.error(error);
+        } finally {
+          setIsMonthlyLoading(false);
+        }
+      };
+      getExplanation();
+    }
+  }, [view, selectedPlatform, analysisResult?.monthlyChartData]);
+
+  // 초기 플랫폼 선택
   useEffect(() => {
     if (
       !selectedPlatform &&
-      monthlyChartData &&
-      Object.keys(monthlyChartData).length > 0
+      analysisResult?.monthlyChartData &&
+      Object.keys(analysisResult.monthlyChartData).length > 0
     ) {
-      setSelectedPlatform(Object.keys(monthlyChartData)[0]);
+      setSelectedPlatform(Object.keys(analysisResult.monthlyChartData)[0]);
     }
-  }, [monthlyChartData, selectedPlatform]);
+  }, [analysisResult?.monthlyChartData, selectedPlatform]);
 
-  if (!platformChartData || !monthlyChartData) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#1B1B1B] text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-[#FF7D29] mx-auto mb-4"></div>
+          <p className="text-xl">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#1B1B1B] text-white font-sans flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-[#FF7D29] text-black font-bold py-2 px-6 rounded-full"
+          >
+            다시 시도
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysisResult?.platformChartData || !analysisResult?.monthlyChartData) {
     return <NoData navigate={navigate} />;
   }
+
+  const { platformChartData, monthlyChartData } = analysisResult;
 
   return (
     <div
@@ -266,7 +409,7 @@ const ChartResult = () => {
 
             {view === "monthly_detail" && (
               <div className="flex items-center gap-2 p-1 bg-gray-800 rounded-md">
-                {Object.keys(monthlyChartData).map((platform) => (
+                {Object.keys(analysisResult.monthlyChartData).map((platform) => (
                   <button
                     key={platform}
                     onClick={() => setSelectedPlatform(platform)}
@@ -289,13 +432,30 @@ const ChartResult = () => {
               <ChartCard
                 key={metricKey}
                 metricKey={metricKey}
-                data={{ platformChartData, monthlyChartData }}
+                data={{ platformChartData: analysisResult.platformChartData, monthlyChartData: analysisResult.monthlyChartData }}
                 view={view}
                 selectedPlatform={selectedPlatform}
               />
             ))}
           </div>
-          <AiAnalysisSummary platformData={platformChartData} />
+          
+          {/* AI KPI 설명 */}
+          {view === 'platform_summary' && (
+            <KpiExplanation
+              title="AI 분석 최종 설명"
+              explanation={aggregateExplanation}
+              isLoading={isAggregateLoading}
+              error={aggregateError}
+            />
+          )}
+          {view === 'monthly_detail' && (
+             <KpiExplanation
+              title={`AI 분석 월별 설명 (${selectedPlatform})`}
+              explanation={monthlyExplanation}
+              isLoading={isMonthlyLoading}
+              error={monthlyError}
+            />
+          )}
         </main>
 
         {/* 사이드바 (지표 해설) */}
