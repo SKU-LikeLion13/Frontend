@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { api } from '../utils/apiClient.js'
+import { api } from "../utils/apiClient.js";
 import {
   LineChart,
   Line,
@@ -18,7 +18,58 @@ import {
   FiArrowDown,
   FiArrowUp,
 } from "react-icons/fi";
-import { METRIC_CONFIG, formatMetric } from "../utils/metrics";
+
+// --- 지표 설정 및 포맷팅 ---
+
+const METRIC_CONFIG = {
+  cpc: {
+    name: "CPC",
+    fullName: "클릭당 비용",
+    Icon: FiBarChart2,
+    goal: "낮을수록 좋음",
+    goalDirection: "down",
+    summary: "광고 클릭 1회당 발생하는 평균 비용입니다.",
+  },
+  cvr: {
+    name: "CVR",
+    fullName: "전환율",
+    Icon: FiBarChart2,
+    goal: "높을수록 좋음",
+    goalDirection: "up",
+    summary: "광고를 클릭한 사용자 중 실제 구매로 이어진 비율입니다.",
+  },
+  roas: {
+    name: "ROAS",
+    fullName: "광고비 대비 수익률",
+    Icon: FiBarChart2,
+    goal: "높을수록 좋음",
+    goalDirection: "up",
+    summary: "광고비 1원당 발생한 매출액의 비율입니다.",
+  },
+  roi: {
+    name: "ROI",
+    fullName: "투자수익률",
+    Icon: FiBarChart2,
+    goal: "높을수록 좋음",
+    goalDirection: "up",
+    summary: "광고비를 제외한 순수익의 투자 대비 수익률입니다.",
+  },
+};
+
+const formatMetric = (value, metricKey) => {
+  if (typeof value !== "number") return value;
+  switch (metricKey) {
+    case "cpc":
+      return `${value.toLocaleString()}원`;
+    case "cvr":
+      return `${(value * 100).toFixed(2)}%`;
+    case "roas":
+    case "roi":
+      return `${value.toLocaleString()}%`;
+    default:
+      return value.toLocaleString();
+  }
+};
 
 // --- 상수 & 보조 함수 ---
 
@@ -77,13 +128,17 @@ const KpiExplanation = ({ explanation, isLoading, error, title }) => {
         <div className="space-y-4">
           {explanation.headline && (
             <div className="bg-[#1B1B1B] p-4 rounded-lg border border-gray-600">
-              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">핵심 요약</h4>
+              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">
+                핵심 요약
+              </h4>
               <p className="text-gray-300">{explanation.headline}</p>
             </div>
           )}
           {explanation.bullets && explanation.bullets.length > 0 && (
             <div className="bg-[#1B1B1B] p-4 rounded-lg border border-gray-600">
-              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">주요 포인트</h4>
+              <h4 className="text-lg font-bold text-[#FF7D29] mb-2">
+                주요 포인트
+              </h4>
               <ul className="space-y-2">
                 {explanation.bullets.map((bullet, index) => (
                   <li key={index} className="text-gray-300 flex items-start">
@@ -109,7 +164,9 @@ const KpiExplanation = ({ explanation, isLoading, error, title }) => {
           )}
           {explanation.nextActions && explanation.nextActions.length > 0 && (
             <div className="bg-[#1B1B1B] p-4 rounded-lg border border-green-500/30">
-              <h4 className="text-lg font-bold text-green-400 mb-2">다음 단계</h4>
+              <h4 className="text-lg font-bold text-green-400 mb-2">
+                다음 단계
+              </h4>
               <ul className="space-y-2">
                 {explanation.nextActions.map((action, index) => (
                   <li key={index} className="text-gray-300 flex items-start">
@@ -208,7 +265,6 @@ const ChartResult = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // 서버에서 데이터 로드
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -216,17 +272,21 @@ const ChartResult = () => {
         setError(null);
 
         // 1. 플랫폼 목록 조회
-        const { data: platforms } = await api.get('/api/ad-data/platforms');
-        
+        const { data: platforms } = await api.get("/ad-data/platforms");
+
         // 2. 플랫폼별 합계 데이터 조회
-        const { data: platformReports } = await api.get('/api/ad-data/reports/platforms');
-        
+        const { data: platformReports } = await api.get(
+          "/ad-data/reports/platforms"
+        );
+
         // 3. 각 플랫폼의 월별 데이터 조회
         const monthlyData = {};
         for (const platform of platforms) {
           try {
-            const { data: monthlyReports } = await api.get(`/api/ad-data/reports/${platform.code}/monthly`);
-            monthlyData[platform.name] = monthlyReports.map(report => ({
+            const { data: monthlyReports } = await api.get(
+              `/ad-data/reports/${platform.code}/monthly`
+            );
+            monthlyData[platform.name] = monthlyReports.map((report) => ({
               month: report.month || report.date,
               cpc: report.cpc,
               cvr: report.cvr,
@@ -234,13 +294,16 @@ const ChartResult = () => {
               roi: report.roi,
             }));
           } catch (e) {
-            console.warn(`Failed to load monthly data for ${platform.name}:`, e);
+            console.warn(
+              `Failed to load monthly data for ${platform.name}:`,
+              e
+            );
             monthlyData[platform.name] = [];
           }
         }
 
         // 4. 데이터 구조 변환
-        const platformChartData = platformReports.map(report => ({
+        const platformChartData = platformReports.map((report) => ({
           platform: report.platformCode,
           cpc: report.cpc,
           cvr: report.cvr,
@@ -250,12 +313,11 @@ const ChartResult = () => {
 
         const result = {
           platformChartData,
-          monthlyChartData: monthlyData
+          monthlyChartData: monthlyData,
         };
 
         setAnalysisResult(result);
         setName(localStorage.getItem("userName") || "사용자");
-        
       } catch (error) {
         console.error("Failed to load data:", error);
         setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -286,7 +348,7 @@ const ChartResult = () => {
         setIsAggregateLoading(true);
         setAggregateError(null);
         try {
-          const response = await api.post('/api/explain/platforms', {})
+          const response = await api.post("/explain/platforms", {});
           setAggregateExplanation(response.data);
         } catch (error) {
           setAggregateError("전체 KPI 요약 정보를 가져오는 데 실패했습니다.");
@@ -301,13 +363,20 @@ const ChartResult = () => {
 
   // 특정 플랫폼 월별 설명 API 호출
   useEffect(() => {
-    if (view === "monthly_detail" && selectedPlatform && analysisResult?.monthlyChartData) {
+    if (
+      view === "monthly_detail" &&
+      selectedPlatform &&
+      analysisResult?.monthlyChartData
+    ) {
       const getExplanation = async () => {
         setIsMonthlyLoading(true);
         setMonthlyError(null);
         setMonthlyExplanation(null); // 플랫폼 변경 시 이전 데이터 초기화
         try {
-          const response = await api.post(`/api/explain/platforms/${selectedPlatform}/monthly`, {})
+          const response = await api.post(
+            `/explain/platforms/${selectedPlatform}/monthly`,
+            {}
+          );
           setMonthlyExplanation(response.data);
         } catch (error) {
           setMonthlyError(
@@ -409,19 +478,21 @@ const ChartResult = () => {
 
             {view === "monthly_detail" && (
               <div className="flex items-center gap-2 p-1 bg-gray-800 rounded-md">
-                {Object.keys(analysisResult.monthlyChartData).map((platform) => (
-                  <button
-                    key={platform}
-                    onClick={() => setSelectedPlatform(platform)}
-                    className={`py-1 px-3 rounded font-semibold text-sm transition-colors ${
-                      selectedPlatform === platform
-                        ? `bg-[#FF7D29] text-black`
-                        : "bg-transparent hover:bg-gray-600"
-                    }`}
-                  >
-                    {platform}
-                  </button>
-                ))}
+                {Object.keys(analysisResult.monthlyChartData).map(
+                  (platform) => (
+                    <button
+                      key={platform}
+                      onClick={() => setSelectedPlatform(platform)}
+                      className={`py-1 px-3 rounded font-semibold text-sm transition-colors ${
+                        selectedPlatform === platform
+                          ? `bg-[#FF7D29] text-black`
+                          : "bg-transparent hover:bg-gray-600"
+                      }`}
+                    >
+                      {platform}
+                    </button>
+                  )
+                )}
               </div>
             )}
           </div>
@@ -432,15 +503,18 @@ const ChartResult = () => {
               <ChartCard
                 key={metricKey}
                 metricKey={metricKey}
-                data={{ platformChartData: analysisResult.platformChartData, monthlyChartData: analysisResult.monthlyChartData }}
+                data={{
+                  platformChartData: analysisResult.platformChartData,
+                  monthlyChartData: analysisResult.monthlyChartData,
+                }}
                 view={view}
                 selectedPlatform={selectedPlatform}
               />
             ))}
           </div>
-          
+
           {/* AI KPI 설명 */}
-          {view === 'platform_summary' && (
+          {view === "platform_summary" && (
             <KpiExplanation
               title="AI 분석 최종 설명"
               explanation={aggregateExplanation}
@@ -448,8 +522,8 @@ const ChartResult = () => {
               error={aggregateError}
             />
           )}
-          {view === 'monthly_detail' && (
-             <KpiExplanation
+          {view === "monthly_detail" && (
+            <KpiExplanation
               title={`AI 분석 월별 설명 (${selectedPlatform})`}
               explanation={monthlyExplanation}
               isLoading={isMonthlyLoading}

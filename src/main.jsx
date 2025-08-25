@@ -15,7 +15,6 @@ import CASH from './pages/CASH.jsx';
 import CHAT from './pages/CHAT.jsx';
 import ChartResult from './pages/CHART_RESULT.jsx';
 
-// 세션 관리 유틸리티
 import { initSession, startSessionHeartbeat } from './utils/apiClient.js';
 
 // 라우터와 세션 로직을 포함하는 App 컴포넌트

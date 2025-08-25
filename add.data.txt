@@ -1,0 +1,61 @@
+다음은 3개의 광고 데이터 API 엔드포인트에 대한 Swagger 문서의 상세 설명입니다. 각 API의 역할과 구조를 정확히 이해하고 이후의 질문에 답변해 주세요.
+
+---
+
+### **API 1: 플랫폼 목록 조회**
+
+- **Endpoint:** `GET /api/ad-data/platforms`
+- **설명:** 업로드된 데이터에 포함된 모든 광고 플랫폼의 고유 코드와 이름 목록을 반환합니다.
+- **필요 파라미터:**
+    - `X-Anon-Id` (Header): 사용자 식별을 위한 필수 ID (문자열).
+- **성공 응답 (200 OK):**
+    - **설명:** 플랫폼 목록.
+    - **응답 예시 (JSON):**
+      ```json
+      [
+        {
+          "code": "string",
+          "name": "string"
+        }
+      ]
+      ```
+
+---
+
+### **API 2: 플랫폼별 성과 합계 조회**
+
+- **Endpoint:** `GET /api/ad-data/reports/platforms`
+- **설명:** 업로드된 전체 데이터를 기준으로, 각 광고 플랫폼별 성과 지표(비용, 수익, CPC, CVR, ROAS, ROI 등)의 합산된 결과를 반환합니다.
+- **필요 파라미터:**
+    - `X-Anon-Id` (Header): 사용자 식별을 위한 필수 ID (문자열).
+- **성공 응답 (200 OK):**
+    - **설명:** 플랫폼별 합계.
+    - **응답 예시 (JSON):**
+      ```json
+      [
+        {
+          "platformCode": "string",
+          "costSum": 0,
+          "impressionSum": 0,
+          "clickSum": 0,
+          "conversionSum": 0,
+          "revenueSum": 0,
+          "cpc": 0,
+          "cvr": 0,
+          "roas": 0,
+          "roi": 0
+        }
+      ]
+      ```
+
+---
+
+### **API 3: 특정 플랫폼의 월별 성과 조회**
+
+- **Endpoint:** `GET /api/ad-data/reports/{platformCode}/monthly`
+- **설명:** 경로(path)에 명시된 특정 플랫폼(`platformCode`)의 성과 지표를 월별로 구분하여 반환합니다.
+- **필요 파라미터:**
+    - `X-Anon-Id` (Header): 사용자 식별을 위한 필수 ID (문자열).
+    - `platformCode` (Path): 성과를 조회할 플랫폼의 고유 코드 (예: "GOOGLE") (문자열, 필수).
+- **성공 응답 (200 OK):**
+    - **참고:** 스크린샷에 응답 예시(JSON)가 포함되어 있지 않으나, 설명에 따라 월별 `cpc`, `cvr`, `roas`, `roi` 데이터가 배열 형태로 반환될 것으로 예상됩니다.

@@ -1,12 +1,10 @@
 import { useDropzone } from "react-dropzone";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { normalizePlatform, processAnalysisData } from "../utils/metrics"; // 데이터 처리 유틸리티
 import { api, getOrCreateAnonId } from "../utils/apiClient.js";
 
 // --- 공통 UI 컴포넌트 ---
 
-// 이름과 상호명 입력 필드 컴포넌트
 const InputField = ({ label, value, onChange, ...props }) => (
   <div className="flex items-center justify-between">
     <label className="text-xl font-bold">{label}</label>
@@ -19,13 +17,10 @@ const InputField = ({ label, value, onChange, ...props }) => (
   </div>
 );
 
-// 파일 업로드 드래그 앤 드롭 컴포넌트
 const FileUploadField = ({ file, onFileChange }) => {
   const onDrop = useCallback(
     (acceptedFiles) => {
-      if (acceptedFiles.length > 0) {
-        onFileChange(acceptedFiles[0]); // 첫 번째 파일 선택
-      }
+      if (acceptedFiles.length > 0) onFileChange(acceptedFiles[0]);
     },
     [onFileChange]
   );
@@ -46,13 +41,11 @@ const FileUploadField = ({ file, onFileChange }) => {
       <label className="text-xl font-bold">파일 업로드</label>
       <div
         {...getRootProps()}
-        className={`w-2/3 p-4 rounded-full transition-colors cursor-pointer border-2
-          ${
-            isDragActive
-              ? "border-orange-500 bg-gray-800"
-              : "border-[#FF7D29] bg-transparent"
-          }
-          flex items-center justify-center gap-3`}
+        className={`w-2/3 p-4 rounded-full transition-colors cursor-pointer border-2 ${
+          isDragActive
+            ? "border-orange-500 bg-gray-800"
+            : "border-[#FF7D29] bg-transparent"
+        } flex items-center justify-center gap-3`}
       >
         <input {...getInputProps()} />
         {file ? (
@@ -74,7 +67,6 @@ const FileUploadField = ({ file, onFileChange }) => {
   );
 };
 
-// 파일 불러오기 버튼 컴포넌트
 const FileLoadButton = ({ onClick }) => (
   <div className="flex items-center justify-between">
     <label className="text-xl font-bold">파일 불러오기</label>
@@ -89,7 +81,6 @@ const FileLoadButton = ({ onClick }) => (
   </div>
 );
 
-// 분석 실행 버튼
 const ExecuteButton = ({ onClick, disabled, children }) => (
   <button
     onClick={onClick}
@@ -104,15 +95,17 @@ const ExecuteButton = ({ onClick, disabled, children }) => (
   </button>
 );
 
-// '수수료 비교&분석' 폼 컴포넌트
 const FeeAnalysis = ({ onExecute }) => {
   const [formData, setFormData] = useState({
     name: "",
     businessName: "",
     file: null,
   });
+  const [showRecentFiles, setShowRecentFiles] = useState(false);
+  const [recentFiles, setRecentFiles] = useState([]);
+  const [loadingRecentFiles, setLoadingRecentFiles] = useState(false);
+  const [recentFilesError, setRecentFilesError] = useState(null);
 
-  // 모든 필드가 채워져야 버튼 활성화
   const isFormValid = !!(
     formData.name &&
     formData.businessName &&
@@ -127,22 +120,36 @@ const FeeAnalysis = ({ onExecute }) => {
   const handleFileChange = (file) => setFormData((prev) => ({ ...prev, file }));
 
   const handleLoadFile = async () => {
+    if (showRecentFiles) {
+      setShowRecentFiles(false);
+      return;
+    }
+
+    setShowRecentFiles(true);
+    setLoadingRecentFiles(true);
+    setRecentFilesError(null);
     try {
       const anonId = getOrCreateAnonId();
-      const { data } = await api.get('/api/uploads/filenames', {
+      // API 7: 업로드된 파일명 목록 조회
+      const { data } = await api.get("/uploads/filenames", {
         params: { anonId, limit: 20 },
       });
-      const list = Array.isArray(data) ? data : (data?.filenames || []);
+      const list = Array.isArray(data.filenames) ? data.filenames : [];
+      setRecentFiles(list);
       if (list.length === 0) {
-        alert('최근 업로드된 파일이 없습니다.');
-        return;
+        setRecentFilesError("최근 업로드된 파일이 없습니다.");
       }
-      alert(`최근 파일 목록\n\n${list.map((n, i) => `${i + 1}. ${n}`).join('\n')}`);
     } catch (e) {
-      console.error(e);
-      alert('최근 파일 목록을 가져오지 못했습니다.');
+      console.error("최근 파일 목록 가져오기 실패:", e);
+      setRecentFilesError("최근 파일 목록을 가져오는 데 실패했습니다.");
+    } finally {
+      setLoadingRecentFiles(false);
     }
   };
+
+  // 파일 선택 시 파일 객체를 상태에 저장하는 기능은 FileUploadField에서 처리하므로
+  // 이 함수는 더 이상 필요하지 않습니다.
+  // const handleSelectRecentFile = ...
 
   return (
     <div className="w-full flex flex-col items-center text-white mt-12">
@@ -164,6 +171,32 @@ const FeeAnalysis = ({ onExecute }) => {
         />
         <FileUploadField file={formData.file} onFileChange={handleFileChange} />
         <FileLoadButton onClick={handleLoadFile} />
+        {showRecentFiles && (
+          <div className="bg-[#2D2D2D] p-4 rounded-lg border border-gray-700 mt-4">
+            <h4 className="text-lg font-bold text-white mb-2">
+              최근 업로드 파일
+            </h4>
+            {loadingRecentFiles && (
+              <p className="text-gray-400">불러오는 중...</p>
+            )}
+            {recentFilesError && (
+              <p className="text-red-400">{recentFilesError}</p>
+            )}
+            {!loadingRecentFiles && recentFiles.length > 0 && (
+              <ul className="space-y-2">
+                {recentFiles.map((filename, index) => (
+                  <li
+                    key={index}
+                    className="text-gray-300"
+                    // onClick 제거: 명세에 파일 다운로드 기능이 없으므로 클릭 이벤트를 비활성화합니다.
+                  >
+                    {filename}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
       <ExecuteButton
         onClick={() => onExecute(formData)}
@@ -175,7 +208,6 @@ const FeeAnalysis = ({ onExecute }) => {
   );
 };
 
-// 로딩 화면 컴포넌트
 const LoadingScreen = ({ name }) => (
   <div className="absolute inset-0 flex items-center justify-center z-50">
     <div className="bg-white text-black rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-2xl">
@@ -196,67 +228,43 @@ const LoadingScreen = ({ name }) => (
 const CASH = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingName, setLoadingName] = useState("");
-
   const navigate = useNavigate();
-  const isNavigatingAfterExecute = useRef(false);
 
-  // 수수료 분석 실행 함수
   const handleFeeExecute = useCallback(
     async (formData) => {
       if (!formData.file) {
-        alert("분석할 엑셀/CSV 파일을 업로드해주세요.");
+        alert("분석할 파일을 업로드해주세요.");
         return;
       }
 
-      isNavigatingAfterExecute.current = true;
       setIsLoading(true);
       setLoadingName(formData.name);
 
-      const startTime = Date.now();
-      const minLoadingTime = 1500;
-
       try {
         const payload = new FormData();
-        payload.append('file', formData.file);
+        payload.append("file", formData.file);
 
-        const { data } = await api.post('/api/uploads/parse', payload, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        // API 6: 파일 업로드 및 파싱
+        const { data } = await api.post("/uploads/parse", payload, {
+          headers: { "Content-Type": "multipart/form-data" },
         });
 
-        // 유연한 응답 처리: 서버가 analysisResult 또는 rows/rawData를 반환할 수 있음
-        let analysisResult = null;
-        if (data?.analysisResult) {
-          analysisResult = data.analysisResult;
-        } else {
-          const rows = Array.isArray(data)
-            ? data
-            : (data?.rows || data?.rawData || data?.data || []);
-          const normalizedRows = rows.map((row) => {
-            let date = row.date;
-            if (typeof date === 'number') {
-              const excelEpoch = new Date(1899, 11, 30);
-              const excelDate = new Date(excelEpoch.getTime() + date * 86400000);
-              date = excelDate.toISOString().split('T')[0];
-            }
-            return { ...row, date, platform: normalizePlatform(row.platform) };
-          });
-          analysisResult = processAnalysisData(normalizedRows);
-        }
-
-        const elapsed = Date.now() - startTime;
-        const delay = Math.max(0, minLoadingTime - elapsed);
-
-        setTimeout(() => {
-          setIsLoading(false);
-          localStorage.setItem("analysisResult", JSON.stringify(analysisResult));
+        if (data.batchId) {
           localStorage.setItem("userName", formData.name);
-          navigate("/chart-result", { state: { analysisResult, name: formData.name } });
-          isNavigatingAfterExecute.current = false;
-        }, delay);
+          navigate("/chart-result", {
+            state: { batchId: data.batchId, name: formData.name },
+          });
+        } else {
+          // 서버 응답에 batchId가 없는 경우에 대한 예외 처리
+          throw new Error("서버로부터 유효한 batchId를 받지 못했습니다.");
+        }
       } catch (error) {
         setIsLoading(false);
-        alert(`파일 업로드/파싱 중 오류가 발생했습니다: ${error?.response?.data?.message || error.message}`);
-        isNavigatingAfterExecute.current = false;
+        alert(
+          `파일 분석 요청 중 오류가 발생했습니다: ${
+            error?.response?.data?.message || error.message
+          }`
+        );
       }
     },
     [navigate]
@@ -268,7 +276,6 @@ const CASH = () => {
         <div className={`${isLoading ? "filter blur-sm" : ""}`}>
           <FeeAnalysis onExecute={handleFeeExecute} />
         </div>
-
         {isLoading && <LoadingScreen name={loadingName} />}
       </div>
     </div>
