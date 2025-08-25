@@ -54,7 +54,7 @@ const FileUploadField = ({ file, onFileChange }) => {
           </span>
         ) : (
           <>
-            <span className="font-semibold text-sm text-white underline whitespace-nowrap">
+            <span className="text-sm font-semibold text-white underline whitespace-nowrap">
               파일 선택
             </span>
             <span className="text-xs text-gray-400 whitespace-nowrap">
@@ -74,7 +74,7 @@ const FileLoadButton = ({ onClick }) => (
       onClick={onClick}
       className="w-2/3 p-4 rounded-full transition-colors cursor-pointer border-2 border-[#FF7D29] bg-transparent flex items-center justify-center gap-3 hover:bg-gray-800"
     >
-      <span className="font-semibold text-sm text-white underline whitespace-nowrap">
+      <span className="text-sm font-semibold text-white underline whitespace-nowrap">
         불러오기
       </span>
     </div>
@@ -152,8 +152,8 @@ const FeeAnalysis = ({ onExecute }) => {
   // const handleSelectRecentFile = ...
 
   return (
-    <div className="w-full flex flex-col items-center text-white mt-12">
-      <h1 className="text-white text-3xl font-bold pb-15">수수료 비교&분석</h1>
+    <div className="flex flex-col items-center w-full mt-12 text-white">
+      <h1 className="text-3xl font-bold text-white pb-15">수수료 비교&분석</h1>
       <div className="w-full max-w-md space-y-8">
         <InputField
           label="이름"
@@ -170,10 +170,18 @@ const FeeAnalysis = ({ onExecute }) => {
           onChange={handleChange}
         />
         <FileUploadField file={formData.file} onFileChange={handleFileChange} />
+        <span className="flex justify-center font-bold bg-[#FF7D29] text-black">예시 엑셀 파일입니다. 행/열을 꼭 맞춰주세요!</span>
+        <div className="flex justify-start ml-2">
+          <img
+            src="/img/realdb.png"
+            alt="DB Icon"
+            className="object-contain w-150 opacity-80"
+          />
+        </div>
         <FileLoadButton onClick={handleLoadFile} />
         {showRecentFiles && (
           <div className="bg-[#2D2D2D] p-4 rounded-lg border border-gray-700 mt-4">
-            <h4 className="text-lg font-bold text-white mb-2">
+            <h4 className="mb-2 text-lg font-bold text-white">
               최근 업로드 파일
             </h4>
             {loadingRecentFiles && (
@@ -209,8 +217,8 @@ const FeeAnalysis = ({ onExecute }) => {
 };
 
 const LoadingScreen = ({ name }) => (
-  <div className="absolute inset-0 flex items-center justify-center z-50">
-    <div className="bg-white text-black rounded-2xl p-12 flex flex-col items-center justify-center text-center shadow-2xl">
+  <div className="absolute inset-0 z-50 flex items-center justify-center">
+    <div className="flex flex-col items-center justify-center p-12 text-center text-black bg-white shadow-2xl rounded-2xl">
       <h2 className="text-3xl font-bold">
         {name ? `${name} 사장님의` : "사장님의"}
         <br />
