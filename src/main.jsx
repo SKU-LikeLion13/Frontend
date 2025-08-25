@@ -26,7 +26,7 @@ const App = () => {
       if (mounted) startSessionHeartbeat(60 * 1000);
     };
     boot();
-    return () => { mounted = false; };
+    return () => { mounted = false; }; 
   }, []);
 
   return (
